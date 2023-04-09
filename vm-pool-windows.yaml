@@ -1,0 +1,100 @@
+apiVersion: pool.kubevirt.io/v1alpha1
+kind: VirtualMachinePool
+metadata:
+  name: vm-pool-windows
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      kubevirt.io/vmpool: vm-pool-windows
+  virtualMachineTemplate:
+    metadata:
+      labels:
+        kubevirt.io/vmpool: vm-pool-windows
+    spec:
+      runStrategy: RerunOnFailure
+      dataVolumeTemplates:
+        - apiVersion: cdi.kubevirt.io/v1beta1
+          kind: DataVolume
+          metadata:
+            name: rootdisk-dv
+          spec:
+            source:
+              pvc:
+                name: windows-base-disk
+            storage:
+              resources:
+                requests:
+                  storage: 32Gi
+      template:
+        metadata:
+          labels:
+            kubevirt.io/vmpool: vm-pool-windows
+        spec:
+          domain:
+            clock:
+              timer:
+                hpet:
+                  present: false
+                hyperv: {}
+                pit:
+                  tickPolicy: delay
+                rtc:
+                  tickPolicy: catchup
+              utc: {}
+            cpu:
+              cores: 1
+              sockets: 1
+              threads: 1
+            devices:
+              disks:
+              - cdrom:
+                  bus: sata
+                name: sysprep
+              - disk:
+                  bus: virtio
+                name: rootdisk
+              inputs:
+              - bus: usb
+                name: tablet
+                type: tablet
+              interfaces:
+              - masquerade: {}
+                model: e1000e
+                name: default
+            features:
+              acpi: {}
+              apic: {}
+              hyperv:
+                frequencies: {}
+                ipi: {}
+                reenlightenment: {}
+                relaxed: {}
+                reset: {}
+                runtime: {}
+                spinlocks:
+                  spinlocks: 8191
+                synic: {}
+                synictimer:
+                  direct: {}
+                tlbflush: {}
+                vapic: {}
+                vpindex: {}
+            machine:
+              type: pc-q35-rhel8.6.0
+            resources:
+              requests:
+                memory: 4Gi
+          evictionStrategy: LiveMigrate
+          networks:
+          - name: default
+            pod: {}
+          terminationGracePeriodSeconds: 3600
+          volumes:
+          - name: sysprep
+            sysprep:
+              configMap:
+                name: sysprep-unattend.xml
+          - name: rootdisk
+            dataVolume:
+              name: rootdisk-dv
